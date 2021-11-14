@@ -7,14 +7,18 @@ from tools import parse_CSV
 def KKT(beta,gamma,pmax):
     ps = np.linspace(0,pmax,100)
     ss = np.linspace(0,1,80)
-    P, S = np.meshgrid(ps,ss)
-    L = (1- gamma*(1-S)*P)* (P-(beta+S)) #just working with L = r(p-c) for now
+    P, S = np.meshgrid(ps,ss,sparse=False)
+    R = 1-gamma*(1-S)*P
+    Rnew = np.where(R>=0, R, -1E-5)
+    L = np.where(R>=0, R*(P-(beta+S)), 1E-5)
     
     fig, ax = plt.subplots(figsize=(7,5.5))
-    #cf = ax.contourf(P,S,L, levels = MaxNLocator(nbins=20).tick_values(L.min(),L.max()))
-    cf = ax.contourf(P,S,L, levels = MaxNLocator(nbins=20).tick_values(0,L.max()))
+    #cf = ax.contourf(P,S,Rnew, levels = MaxNLocator(nbins=20).tick_values(0.,Rnew.max()))
+    print(L.min(),L.max())
+    cf = ax.contourf(P,S,L, levels = MaxNLocator(nbins=20).tick_values(L.min(),L.max()))
     cbar = fig.colorbar(cf, ax=ax)
-    cbar.ax.set_ylabel('$f = r(p-c)$')
+    cbar.ax.set_ylabel('$r$')
+    #cbar.ax.set_ylabel('$f = r(p-c)$')
 
     soln = 1/(gamma*(1-ss))
     s1p = 1/2*(1-beta + np.sqrt((1+beta)**2 -4/gamma))
@@ -46,10 +50,10 @@ def betagammaPD(pmax,B,generate=True):
     # 0<B<1
     csvname = "betagammaPD.csv"
     if generate == True:
-        betas = [3.]
-        gammas = [4.]
-        #gammas = np.linspace(0.1*p_max,2*pmax,50)
-        #betas = np.linspace(0,2*p_max,50)
+        #betas = [3.]
+        #gammas = [4.]
+        gammas = np.linspace(0.1*p_max,2*pmax,50)
+        betas = np.linspace(0,2*p_max,50)
         df={}
         quantities = ['pmax','beta','gamma','p','s','r','c','P','E','P/E']
 
@@ -77,8 +81,8 @@ def betagammaPD(pmax,B,generate=True):
     cf = ax.contourf(bs,gs,Z, levels = MaxNLocator(nbins=20).tick_values(Z.min(),Z.max()))
     cbar = fig.colorbar(cf, ax=ax)
     cbar.ax.set_ylabel('$P/E$')
-    ax.set_xlabel('unit price (p)')
-    ax.set_ylabel('sustainability fraction (s)')
+    ax.set_xlabel('$\\beta$')
+    ax.set_ylabel('$\gamma$')
     plt.tight_layout()
     plt.show()
     
@@ -97,7 +101,6 @@ def FindBetaGammaStuff(args):
         f = fs[idx2]
         p = ps[idx2]
         s = ss[idx2]
-        print(fs)
         print(p,s,f)
     else:
         f = -1
@@ -155,7 +158,8 @@ def etccases(beta, gamma,p_max,opt):
     r = 1-gamma*(1-s)*p
     c = beta + s
     f = r*(p-beta-s)
-    cond = check & (p <= p_max) & (p>=0) & (s<=1) & (s>=0) & (r>=0) & (c>=0)
+    cond = check & (p <= p_max) & (p>=0) & (s<=1) & (s>=0)
+    #cond = check & (p <= p_max) & (p>=0) & (s<=1) & (s>=0) & (r>=0) & (c>=0)
     if cond == True:
         return p,s,r,c,f
     else: return np.nan, np.nan, np.nan, np.nan, np.nan
@@ -255,7 +259,7 @@ if __name__ == "__main__":
     print(df)
     '''
     B=0.1
-    betagammaPD(p_max,B,generate=True)
+    #betagammaPD(p_max,B,generate=True)
     #PlotKKT(csvname, p_max,case)
     
     #PlotCase10(p_max)

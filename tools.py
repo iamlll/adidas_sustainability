@@ -10,9 +10,10 @@ def parse_CSV(df_orig,colnames):
         arrays of x,y,z formatted for contour plotting
     '''
     #read in CSV as Pandas dataframe
+    import numpy.ma as ma
     df = df_orig[colnames]
-    a,b,c = colnames
-    orgdf = df.groupby([a,b]).mean() #group by eta and U values; take the mean since there's only one of each combo anyways so it doesn't matter
+    a,b = colnames[:2]
+    orgdf = df.groupby([a,b],sort=False,group_keys=False).mean()
     odf_reset = orgdf.reset_index()
     odf_reset.columns = colnames
     odf_pivot = odf_reset.pivot(a,b)
