@@ -244,10 +244,10 @@ if __name__ == "__main__":
 
     #1/gamma >= beta
     p_max = 10
-    B = 0.5
+    B = 0.158
     alpha1 = 1.
-    alpha2 = 0.1
-    gmax = .6
+    alpha2 = 1.
+    gmax = 3
     bmax = p_max
     #PlotKKT(csvname, p_max,case)
     
