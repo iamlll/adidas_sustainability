@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import fsolve, curve_fit
 from matplotlib.ticker import MaxNLocator, LogLocator
 from tools import parse_CSV
-from functions import ProfDensity, ProfEnvDensity
+from fun_model3 import ProfDensity, ProfEnvDensity
 import sys
 
 def PlotProfDensity(fn):
@@ -211,9 +211,10 @@ def betagammaPD(csvname):
     maskedL3 = ma.masked_invalid(L3)
     cpmin = 0.
     cf = ax[0].contourf(bs,gs,maskedL, levels = MaxNLocator(nbins=20).tick_values(cpmin,maskedL.max()))
-    idx = np.where(maskedL2 == maskedL2.min())
+    idx = np.where(maskedL == maskedL.max())
     print(bs[idx],gs[idx])
-    cf3 = ax[1].contourf(bs,gs,maskedL2, levels = MaxNLocator(nbins=20).tick_values(-2,maskedL2.max()))
+    print(maskedL.min(),maskedL.max())
+    cf3 = ax[1].contourf(bs,gs,maskedL2, levels = MaxNLocator(nbins=20).tick_values(maskedL2.min(),maskedL2.max()))
 
     nbins_case = np.unique(maskedL3)
     print(nbins_case)
@@ -246,8 +247,8 @@ if __name__ == "__main__":
     p_max = 10
     B = 0.158
     alpha1 = 1.
-    alpha2 = 1.
-    gmax = 3
+    alpha2 = .1
+    gmax = .1
     bmax = p_max
     #PlotKKT(csvname, p_max,case)
     
