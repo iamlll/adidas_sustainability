@@ -28,24 +28,30 @@ def Case1(P,f):
     partial_p P = 0
     partial_m P = 0
     '''
-    p0,m0 = fsolve(lambda x: P.grad(x[0],x[1],f), [P.pmax/2,2]) 
-    print(p0,m0,P.val(p0,m0,f))
-    if P.cond(p0,m0,f): return p0,m0
+    p,m = fsolve(lambda x: P.grad(x[0],x[1],f), [P.pmax/2,2]) 
+    if P.cond(p,m,f): return p,m
+    else: return -2,-2
+
+def Case2(P,f):
+    m = f.mmax
+    p = fsolve(lambda x: P.grad(x,m,f)[0], [P.pmax/2])[0] 
+    
+    if P.cond(p,m,f) == False: return -2,-2
+    mu1 = P.grad(p,m,f)[1]
+    if (mu1 >=0): return p,m
     else: return -2,-2
 
 def Case3(P,f):
-    m = 1.
+    m = f.mmax
     p = P.pmax
-    if P.cond(p,m,f) == False: return -1,-1
-    grad = P.grad(p,m,f)
-    mu1 = grad[0]
-    mu2 = -grad[1]
+    if P.cond(p,m,f) == False: return -2,-2
+    mu2,mu1 = P.grad(p,m,f)
     if (mu1 >=0) & (mu2 >= 0): return p,m
     else: return -2,-2
 
 def Case4(P,f):
     p = P.pmax
-    m = fsolve(lambda x: P.grad(p,x,f)[1], [.9])[0]    
+    m = fsolve(lambda x: P.grad(p,x,f)[1], [5])[0]    
     if P.cond(p,m,f) == False:
         return -2,-2
     mu2 = P.grad(p,m,f)[0]
@@ -55,6 +61,7 @@ def Case4(P,f):
 def Case5(P,f):
     #first solve g3, g3' = 0 for p and m
     p,m = fsolve(lambda x: P.GetConstraint(x[0],x[1],f),[P.pmax/2,2])
+    print(p,m,P.val(p,m,f))
     if P.cond(p,m,f) == False: return -2,-2
     #Next, solve the KKT conditions to get mu3 and mu3'
     mu3, mu3p = fsolve(lambda x: P.grad(p,m,f) - x[0]*P.GradConstraint(p,m,f)[0] - x[1]*P.GradConstraint(p,m,f)[1], [1,1])
@@ -67,6 +74,7 @@ def FindStuff(args):
     P.Kn = Kn
     
     if n == 1: p,m = Case1(P,f)
+    elif n == 2: p,m = Case2(P,f)
     elif n == 3: p,m = Case3(P,f)
     elif n == 4: p,m = Case4(P,f)
     elif n == 5: p,m = Case5(P,f)
@@ -85,8 +93,8 @@ def FindAllCases(args):
     return info[idx,:][0]
 
 def PoolParty(P,f,Ksmax=5,Knmax=5,num=np.nan):
-    Kns = np.linspace(0,Knmax,20)
-    Kss = np.linspace(0,Ksmax,20)
+    Kns = np.linspace(0,Knmax,100)
+    Kss = np.linspace(0,Ksmax,100)
     df={}
     quantities = ['case','Kn','Ks','gamma','beta','c0','pmax','p','m','r','P','E_n', 'E_s','Etot','P/E']
 
@@ -166,9 +174,9 @@ if __name__ == "__main__":
     from itertools import product
     from fun_model4b import ProfDensity, WTP_cubic, WTP_linear
 
-    fs = WTP_cubic()
+    fs = WTP_cubic(mmax=10)
     #fs = WTP_linear()
-    gamma = .5
+    gamma = 0.8
     Ks = 1.
     Kn = 1
     P = ProfDensity(gamma=gamma,K_s=Ks, K_0=Kn) 

@@ -6,6 +6,7 @@ class WTP_linear:
     def __init__(self):
         self.slope = -2.64
         self.b = self.slope+1 #want f(1) = 1
+        self.mmax = self.b/self.slope
     def val(self,m):
         if (m < 1): return 1.
         elif m >= self.b/self.slope:
@@ -29,8 +30,9 @@ class WTP_cubic:
     '''
     f_s(m) = 1/(1+am^3), a = 1 #regulates "willingness-to-pay" factor; for a=1, f_s(1.25) = 0.34 means that around 34% of consumers are willing to pay 1.25x the initial price of a product for a more sustainably produced version
     '''
-    def __init__(self):
+    def __init__(self,mmax=100):
         self.a = 1.
+        self.mmax = mmax
 
     def val(self,m):
         #willingness to pay for a more sustainable product, f_s(m) = 1/1(1+am^3)
@@ -78,8 +80,7 @@ class ProfDensity:
         #f = WTP function
         Es = f.val(m)*self.rate(p)*self.e_s
         En = (1-f.val(m))*self.rate(p)
-        Etot = Es + En
-        return Es, En, Etot
+        return Es, En, Es+En
 
     def cost(self,p,m,wtp):
         #c_s and c_n
@@ -88,7 +89,10 @@ class ProfDensity:
     def val(self,p,m,f):
         cs,cn = self.cost(p,m,f) 
         Es, En,_ = self.E(p,m,f)
-        return f.val(m)*self.rate(p)*(m*p-cs) -self.Ks*Es  + (1-f.val(m))*(p-cn) - self.Kn*En
+        #check = (1-self.gamma*p)*(p-self.c0-self.Kn+f.val(m)*((m-1)*p-(self.beta-1)*self.c0-self.Ks*self.e_s+ self.Kn))
+        term1 = f.val(m)*self.rate(p)*(m*p-cs) -self.Ks*Es  
+        term2 = (1-f.val(m))*self.rate(p)*(p-cn) - self.Kn*En
+        return term1 + term2
 
     def normval(self,p,m,f):
         P = self.val(p,m,f)
@@ -98,7 +102,7 @@ class ProfDensity:
 
     def grad(self,p,m,wtp):
         f = wtp.val(m)
-        dPdp = (1-2*self.gamma*p)*(m-1)*f + 1 + self.gamma*((self.beta-1)*self.c0 + self.Ks*self.e_s - self.Kn)*f
+        dPdp = (1-2*self.gamma*p)*(1+(m-1)*f) + self.gamma*(self.c0+self.Kn + f*((self.beta-1)*self.c0 + self.Ks*self.e_s - self.Kn))
         dPdm = (1-self.gamma*p)*(wtp.grad(m)*((m-1)*p - (self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn) +p*f)
         return dPdp, dPdm
 
@@ -107,9 +111,9 @@ class ProfDensity:
         gf = wtp.grad(m)
         lf = wtp.lap(m)
         r = self.rate(p)
-        d2pP = -2*self.gamma*(m-1)*f
+        d2pP = -2*self.gamma*(1+(m-1)*f)
         dpdmP = (1-2*self.gamma*p)*(f+(m-1)*gf) +self.gamma*gf*((self.beta-1)*self.c0 + self.Ks*self.e_s -self.Kn)
-        d2mP = (1-self.gamma*p)*lf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn) +2*p*(1-self.gamma*p)*gf
+        d2mP = (1-self.gamma*p)*(lf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn) +2*p*gf)
         H = np.array([[d2pP,dpdmP],[dpdmP,d2mP]])
         #print(np.linalg.eig(H)[0])
         return H
@@ -141,7 +145,7 @@ class ProfDensity:
 
     def cond(self,p,m,f):
         '''check bounds for p and m'''
-        check = (p >= 0) & (p <= self.pmax) & (m >= 0) 
+        check = (p >= 0) & (p <= self.pmax) & (m >= 0) & (m <= f.mmax) 
         return check
 
 if __name__=="__main__":
@@ -149,7 +153,7 @@ if __name__=="__main__":
     fs = WTP_cubic()
     gamma = 0.5
     P = ProfDensity(gamma=gamma) 
-    print(P.GetConstraint(1,1.25,fs))
+    #print(P.GetConstraint(1,1.25,fs))
     print(P.val(1,1.25,fs))
-    print(P.normval(1,1.25,fs))
+    #print(P.normval(1,1.25,fs))
     #print(P.hess(2,1.25,fs))
