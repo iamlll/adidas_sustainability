@@ -50,95 +50,132 @@ class WTP_cubic:
         #3rd derivative
         return -6*self.a/(1+self.a*m**3)**4 *(10*self.a**2*m**6 -16*self.a*m**3 +1)
 
+class LinRate():
+    '''r(p): selling rate / day of a given product'''
+
+    def __init__(self,gamma=1):
+        self.gamma = gamma
+
+    def val(self,p):
+        #willingness to pay for a more sustainable product, f_s(m) = 1/1(1+am^3)
+        return 1-self.gamma*p
+ 
+    def grad(self,p):
+        #gradient wrt m
+        return -self.gamma
+
+    def lap(self,p):
+        #laplacian (i.e. 2nd deriv)
+        return 0.
+
+    def jerk(self,p):
+        #3rd derivative
+        return 0.
+   
+class ExpRate():
+    def __init__(self,gamma=1):
+        self.gamma = gamma
+
+    def val(self,p):
+        #willingness to pay for a more sustainable product, f_s(m) = 1/1(1+am^3)
+        return np.exp(-self.gamma*p)
+ 
+    def grad(self,p):
+        #gradient wrt m
+        return -self.gamma*self.val(p)
+
+    def lap(self,p):
+        #laplacian (i.e. 2nd deriv)
+        return self.gamma**2*self.val(p)
+
+    def jerk(self,p):
+        #3rd derivative
+        return -self.gamma**3* self.val(p)
+
 class ProfDensity:
     '''Profit density P(p,m) = rs(ps-cs) + rn(p0 -cn) as function of unit selling price p0 (ps = m*p0) and willingness to pay (WTP) factor m
     gamma, s, beta_i, a ideally known from data; optimize wrt m (sustainability premium) and p_0 (init selling price in absence of sustainable options)
     Make phase plots wrt K_n, K_s (regulations for sustainable and nonsustainable products)    
 
-    r(p) = 1-\gamma p #selling rate in the absence of any sustainable options, p in units of e(0) = base unit env cost for unsustainable product
+    r(p): selling rate in the absence of any sustainable options, p in units of e(0) = base unit env cost for unsustainable product
     E_s = f_s r(p) e(s)
     E_n = (1-f_s) r(p)
     e(s) = 1-Bs, B=0.158 #unit env cost
     c_s = beta c_0 #c0 = base production cost
     '''
-    def __init__(self,K_s=1., K_0=1.2,beta=1.7,gamma=1.,s=0.7,c0=0.5):
+    def __init__(self,K_s=1., K_0=1.2,beta=1.7,s=0.7,c0=0.5,pmax=10):
         self.Kn = K_0
         self.Ks = K_s
         self.beta = beta
-        self.gamma = gamma
-        self.pmax = 1./gamma #max selling price
+        self.pmax = pmax #max selling price
         self.s = s #how much of the shoe is made from biodegradable materials - this is a fake number for now
         self.B = 0.158
         self.c0 = c0
         self.e_s = 1-self.B*self.s
 
-    def rate(self,p): #selling rate given no sustainable product (s=0)
-        return 1-self.gamma*p
-
-    def E(self,p,m, f):
+    def E(self,p,m,f,r):
         #env. cost of sustainable product (E_s), env. cost of unsustainable prod (E_n)
         #f = WTP function
-        Es = f.val(m)*self.rate(p)*self.e_s
-        En = (1-f.val(m))*self.rate(p)
+        
+        Es = f.val(m)*r.val(p)*self.e_s
+        En = (1-f.val(m))*r.val(p)
         return Es, En, Es+En
 
-    def cost(self,p,m,wtp):
+    def cost(self):
         #c_s and c_n
         return self.beta*self.c0, self.c0
 
-    def val(self,p,m,f):
-        cs,cn = self.cost(p,m,f) 
-        Es, En,_ = self.E(p,m,f)
-        #check = (1-self.gamma*p)*(p-self.c0-self.Kn+f.val(m)*((m-1)*p-(self.beta-1)*self.c0-self.Ks*self.e_s+ self.Kn))
-        term1 = f.val(m)*self.rate(p)*(m*p-cs) -self.Ks*Es  
-        term2 = (1-f.val(m))*self.rate(p)*(p-cn) - self.Kn*En
+    def val(self,p,m,f,r):
+        cs,cn = self.cost() 
+        Es, En,_ = self.E(p,m,f,r)
+        term1 = f.val(m)*r.val(p)*(m*p-cs) -self.Ks*Es  
+        term2 = (1-f.val(m))*r.val(p)*(p-cn) - self.Kn*En
         return term1 + term2
 
-    def normval(self,p,m,f):
-        P = self.val(p,m,f)
-        Etot = self.E(p,m,f)[-1]
+    def normval(self,p,m,f,r):
+        P = self.val(p,m,f,r)
+        Etot = self.E(p,m,f,r)[-1]
         if Etot == 0: return -1
         else: return P/Etot
 
-    def grad(self,p,m,wtp):
+    def grad(self,p,m,wtp,r):
         f = wtp.val(m)
-        dPdp = (1-2*self.gamma*p)*(1+(m-1)*f) + self.gamma*(self.c0+self.Kn + f*((self.beta-1)*self.c0 + self.Ks*self.e_s - self.Kn))
-        dPdm = (1-self.gamma*p)*(wtp.grad(m)*((m-1)*p - (self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn) +p*f)
+        dPdp = r.grad(p)*(p-self.c0-self.Kn +((m-1)*p-(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn)*f) + r.val(p)*(1+(m-1)*f)
+        dPdm = r.val(p)*(wtp.grad(p)*((m-1)*p-(self.beta-1)*self.c0-self.Ks*self.e_s +self.Kn) +p*f)
         return dPdp, dPdm
 
-    def hess(self,p,m,wtp):
+    def hess(self,p,m,wtp,r):
         f = wtp.val(m)
         gf = wtp.grad(m)
         lf = wtp.lap(m)
-        r = self.rate(p)
-        d2pP = -2*self.gamma*(1+(m-1)*f)
-        dpdmP = (1-2*self.gamma*p)*(f+(m-1)*gf) +self.gamma*gf*((self.beta-1)*self.c0 + self.Ks*self.e_s -self.Kn)
-        d2mP = (1-self.gamma*p)*(lf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn) +2*p*gf)
+        d2pP = r.lap(p)*(p-self.c0-self.Kn+((m-1)*p-(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn)*f) +2*r.grad(p)*((m-1)*f+1)
+        dpdmP = r.grad(p)*(p*f+gf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn)) +r.val(p)*(f+(m-1)*gf)
+        d2mP = r.val(p)*(lf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn) +2*p*gf)
         H = np.array([[d2pP,dpdmP],[dpdmP,d2mP]])
-        #print(np.linalg.eig(H)[0])
         return H
 
-    def GetConstraint(self,p,m,wtp):
+    def GetConstraint(self,p,m,wtp,r):
         '''returns concavity condition to ensure that Hessian is negative semidefinite (i.e. that P= objective function is always maximal)
         '''
-        H = self.hess(p,m,wtp)
+        H = self.hess(p,m,wtp,r)
         x = H[0,0] + H[1,1]
         q = H[0,1]**2 -H[0,0]*H[1,1]
         return x,q
 
-    def GradConstraint(self,p,m,wtp):
+    def GradConstraint(self,p,m,wtp,r):
         '''returns gradient of convexity constraint'''
-        H = self.hess(p,m,wtp)
+        H = self.hess(p,m,wtp,r)
         f = wtp.val(m)
         gf = wtp.grad(m)
         lf = wtp.lap(m)
         
-        r = self.rate(p)
-        value = -2*self.gamma*(f + (m-1)*gf)
-        value2 = (1-2*self.gamma*p)*(2*gf + (m-1)*lf) + self.gamma*lf*((self.beta-1)*self.c0 + self.Ks*self.e_s -self.Kn)
-        grad11 = np.array([0.,value])
-        grad12 = np.array([value, value2])
-        grad22 = np.array([value2, (1-self.gamma*p)*((m-1)*p + self.Kn -(self.beta-1)*self.c0 -self.Ks*self.e_s)* wtp.jerk(m) + 3*p*(1-self.gamma*p)*lf])
+        dpH11 = r.jerk(p)*(p-self.c0 -self.Kn +((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn)*f) +3*r.lap(p)*(1+(m-1)*f)
+        dmH11 = r.lap(p)*(p*f +gf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn)) +2*r.grad(p)*(f +(m-1)*gf) #also = dpH12
+        dmH12 = r.grad(p)*(p*gf +lf*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn)) +r.val(p)*(2*gf +(m-1)*lf) #also = dpH22
+        dmH22 = r.val(p)*(3*p*lf + wtp.jerk(m)*((m-1)*p -(self.beta-1)*self.c0 -self.Ks*self.e_s +self.Kn))
+        grad11 = np.array([dpH11, dmH11])
+        grad12 = np.array([dmH11, dmH12])
+        grad22 = np.array([dmH12, dmH22])
         gradx = grad11 + grad22
         gradq = 2*H[0,1]* grad12 - H[1,1]*grad11 - H[0,0]*grad22
         return gradx, gradq
@@ -151,9 +188,11 @@ class ProfDensity:
 if __name__=="__main__":
     import pandas as pd
     fs = WTP_cubic()
-    gamma = .5
-    P = ProfDensity(gamma=gamma) 
+    gamma = 0.5
+    rate = ExpRate(gamma)
+    print(rate.val(1))
+    P = ProfDensity(pmax=10) 
     #print(P.GetConstraint(1,1.25,fs))
-    print(P.val(1,1.25,fs))
+    print(P.val(1,1.25,fs,rate))
     #print(P.normval(1,1.25,fs))
     #print(P.hess(2,1.25,fs))
