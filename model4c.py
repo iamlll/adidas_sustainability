@@ -130,7 +130,7 @@ def PoolParty(P,f,r,Ksmax=5,Knmax=5,num=np.nan):
 
 def KnKsPD(csvname):
     import numpy.ma as ma
-    fig, ax = plt.subplots(1,2,figsize=(10,5),sharey='row',sharex='row')
+    fig, ax = plt.subplots(1,3,figsize=(12,5),sharey='row',sharex='row')
     df = pd.read_csv(csvname)
     
     gamma = df['gamma'].values[0]
@@ -139,9 +139,10 @@ def KnKsPD(csvname):
     colnames = ['Kn','Ks','P/E']
     colnames1b = ['Kn','Ks','P']
     colnames1c = ['Kn','Ks','Etot']
-    #Kns,Kss,Z = parse_CSV(df,colnames)
-    Kns,Kss,P = parse_CSV(df,colnames1b)
-    _,_,E = parse_CSV(df,colnames1c)
+    colnames1d = ['Kn','Ks','m']
+    Kns,Kss,P = parse_CSV(df,colnames)
+    #Kns,Kss,P = parse_CSV(df,colnames1b)
+    _,_,Ms = parse_CSV(df,colnames1d)
     colnames2 = ['Kn','Ks','case']
     Kns,Kss,Zcase = parse_CSV(df,colnames2)
     #L = np.where((P>=0) , P, np.nan)
@@ -150,6 +151,7 @@ def KnKsPD(csvname):
     #maskedL3 = ma.masked_invalid(L3)
     cpmin = 0.
     cf = ax[0].contourf(Kns,Kss,P, levels = MaxNLocator(nbins=20).tick_values(cpmin,P.max()))
+    cf3 = ax[2].contourf(Kns,Kss,Ms, levels = MaxNLocator(nbins=20).tick_values(Ms.min(),Ms.max()))
 
     nbins_case = np.unique(Zcase)
     print(nbins_case)
@@ -157,9 +159,11 @@ def KnKsPD(csvname):
     cf2 = ax[1].contourf(Kns,Kss,Zcase, levels = MaxNLocator(nbins=nbins_case+1).tick_values(Zcase.min(),Zcase.max()))
     cbar = fig.colorbar(cf, ax=ax[0])
     cbar2 = fig.colorbar(cf2, ax=ax[1])
+    cbar3 = fig.colorbar(cf3, ax=ax[2])
     fig.suptitle("$\gamma= " + str(gamma) + "$, $\\beta = " + str(beta) + "$, $c_0 = " + str(c0) + "$")
-    cbar.ax.set_ylabel('$' + colnames1b[-1] + '$')
+    cbar.ax.set_ylabel('$' + colnames[-1] + '$')
     cbar2.ax.set_ylabel(colnames2[-1])
+    cbar3.ax.set_ylabel(colnames1d[-1])
 
     fig.supxlabel('$K_n$')
     fig.supylabel('$K_s$')
@@ -175,13 +179,13 @@ if __name__ == "__main__":
 
     fs = WTP_cubic(mmax=10)
     #fs = WTP_linear()
-    gamma = 0.8
+    gamma = 0.4
     Ks = 1.
     Kn = 1
-    rate = LinRate(gamma=gamma)
-    P = ProfDensity(pmax=1/gamma,K_s=Ks, K_0=Kn) 
-    #rate = ExpRate(gamma=gamma)
-    #P = ProfDensity(pmax=10,K_s=Ks, K_0=Kn) 
+    #rate = LinRate(gamma=gamma)
+    #P = ProfDensity(pmax=1/gamma,K_s=Ks, K_0=Kn) 
+    rate = ExpRate(gamma=gamma)
+    P = ProfDensity(pmax=10,K_s=Ks, K_0=Kn) 
 
     #betagammaPD(p_max,B,generate=True)
     #PlotProfDensity(P,fs)
