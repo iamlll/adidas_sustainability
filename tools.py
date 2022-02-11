@@ -11,15 +11,9 @@ def parse_CSV(df_orig,colnames):
     '''
     #read in CSV as Pandas dataframe
     import numpy.ma as ma
-    df = df_orig[colnames]
-    a,b = colnames[:2]
-    orgdf = df.groupby([a,b],sort=False,group_keys=False).mean()
-    odf_reset = orgdf.reset_index()
-    odf_reset.columns = colnames
-    odf_pivot = odf_reset.pivot(a,b)
-    pd.set_option("display.max.columns", None)
-    Y = odf_pivot.columns.levels[1].values
-    X = odf_pivot.index.values
-    Z = odf_pivot.values.transpose()
-    Xi,Yi = np.meshgrid(X, Y)
+    a,b,c = colnames
+    Z = df_orig.pivot_table(index=a, columns=b, values=c).T.values
+    X_unique = np.sort(df_orig[a].unique())
+    Y_unique = np.sort(df_orig[b].unique())
+    Xi, Yi = np.meshgrid(X_unique, Y_unique)
     return Xi, Yi, Z

@@ -8,10 +8,11 @@ import sys
 def PlotProfDensity(profitfxn, r):
     ps = np.linspace(0,profitfxn.pmax,100)
     L = profitfxn.val(ps,r)
+    #L = profitfxn.grad(ps,r)
     fig, ax = plt.subplots(figsize=(7,5.5))
     ax.plot(ps,L)
-    idx = np.where(L == L.max())[0]
-    print("p_c: " + str(ps[idx]) + "\tPmax: " + str(L.max()))
+    #idx = np.where(L == L.max())[0]
+    #print("p_c: " + str(ps[idx]) + "\tPmax: " + str(L.max()))
     ax.set_ylabel('$P$')
     ax.set_xlabel('unit selling price (p)')
     fig.suptitle('$K_s = $' + str(profitfxn.Ks) + ', $K_n = $' + str(profitfxn.Kn))
@@ -22,13 +23,14 @@ def Case1(P,r):
     '''mu_i = 0 for all i, just solve
     partial_p P = 0
     '''
-    p = fsolve(lambda x: P.grad(x,r), [P.pmax/2])[0] 
+    p = fsolve(lambda x: P.grad(x,r), [P.pmax])[0] 
     if P.cond(p,r): return p
     else: return -2
 
 def Case3(P,r):
     p = P.pmax
-    if P.cond(p,r) == False: return -2
+    if P.cond(p,r) == False: 
+        return -2
     mu3 = P.grad(p,r)
     if (mu3 >=0): return p
     else: return -2
@@ -139,14 +141,14 @@ if __name__ == "__main__":
     from fun_model5 import ProfDensity, LinRate, ExpRate
 
     gamma = 0.4
-    Ks = 1.
+    Ks = 4
     Kn = 1
     #rate = LinRate(gamma=gamma)
     #P = ProfDensity(pmax=1/gamma,K_s=Ks, K_0=Kn) 
     rate = ExpRate(gamma=gamma)
     P = ProfDensity(pmax=10,K_s=Ks, K_0=Kn) 
+    print(Case3(P,rate))
+    PlotProfDensity(P,rate)
 
-    #PlotProfDensity(P,rate)
-
-    csvname = PoolParty(P,rate) 
-    KnKsPD(csvname)
+    #csvname = PoolParty(P,rate,num=1) 
+    #KnKsPD(csvname)
