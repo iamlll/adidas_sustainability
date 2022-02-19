@@ -59,8 +59,10 @@ def Plot4D(size=3,e_s=0.,gamma=1.):
     fig2, ax2 = plt.subplots(figsize=(7,5))
     cs = np.linspace(0,1,100)
     epss = np.linspace(0,1,50)
-    ms = np.linspace(0.7,2,size)
-    fs = np.linspace(0.01,1,size)
+    #ms = np.linspace(0.7,2,size)
+    #fs = np.linspace(0.01,1,size)
+    fs = [0.01,0.1,0.5]
+    ms = [1.01,1.1,1.5]
     X,Y = np.meshgrid(cs,epss)
 
     K2m,K2p = FindKs(0.1,epss,e_s,0.3,0,gamma)
@@ -69,7 +71,8 @@ def Plot4D(size=3,e_s=0.,gamma=1.):
     ax2.legend()
     ax2.set_xlabel('eps')
     ax2.set_ylabel('Kmin')
-
+    cmin = 0
+    cmax = 0
     fig, axs = plt.subplots(size,size,figsize=(8,6))
     for i,j in product(range(size),range(size)):
         print(ms[i],fs[j])
@@ -82,12 +85,15 @@ def Plot4D(size=3,e_s=0.,gamma=1.):
         altKs = (Y-(ms[i]-1)*1/gamma)/(1-e_s) #found from setting p_n = p_s = p_max (I believe this returns 0 profit though)
         pn,ps = FindAnaPs(Kmins,X,Y,e_s,ms[i],fs[j],gamma,opt='lin')
         Z = np.where((pn <= 1/gamma) & (ps <= 1/gamma), Kmins, altKs)
-        cf = axs[i,j].contourf(X,Y,Z)
+        print(Z.min(),Z.max())
+        cmin = np.minimum(cmin,np.amin(Z))
+        cmax = np.maximum(cmax,Z.max())
+        cf = axs[i,j].contourf(X,Y,Z, levels = MaxNLocator(nbins=15).tick_values(cmin,0.6),extend='max')
         cbar = fig.colorbar(cf, ax=axs[i,j])
         axs[i,j].set_xlabel('$c$')
         axs[i,j].set_ylabel('$\epsilon$')
         cbar.ax.set_ylabel('$K_{min}$')
-        axs[i,j].set_title('$(m,f) = (%.1f, %.1f)$' %(ms[i],fs[j]))
+        axs[i,j].set_title('$(m,f) = (%.2f, %.2f)$' %(ms[i],fs[j]))
     #fig.suptitle('$K_{min}$')
     plt.tight_layout(pad=1.)
     plt.show()
@@ -110,7 +116,7 @@ if __name__ == "__main__":
     #PlotProfitVsK_ana(Pn,Ps,rate)
     #PlotK(csvname)
     #AnalyticK(gamma,c=c,opt='lin')
-    #Plot4D(3,e_s=0.,gamma=1.)
-    print(FindKs(c=.1,eps=0.1,e_s=0.3,m=0.5,f=0.1,gamma=0.4,opt='lin'))
-    print(FindKs(c=.1,eps=.1,e_s=0.3,m=0.5,f=0.4,gamma=0.4,opt='lin'))
-    print(FindKs(c=.1,eps=.1,e_s=0.3,m=0.5,f=0.9,gamma=0.4,opt='lin'))
+    Plot4D(3,e_s=0.,gamma=1.)
+    #print(FindKs(c=.1,eps=0.1,e_s=0.3,m=0.5,f=0.1,gamma=0.4,opt='lin'))
+    #print(FindKs(c=.1,eps=.1,e_s=0.3,m=0.5,f=0.4,gamma=0.4,opt='lin'))
+    #print(FindKs(c=.1,eps=.1,e_s=0.3,m=0.5,f=0.9,gamma=0.4,opt='lin'))
