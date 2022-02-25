@@ -31,44 +31,51 @@ def FindKs(c,eps,e_s,m,f,gamma=0.4,opt='lin'):
     else: #exponential
         return ((1-m)*c+eps)/(m-e_s) +(f*(1-m)-1)/(f*gamma*(m-e_s)) *np.log(1+f*(m-1))
 
-def PlotProfitVsK_ana(Pn,Ps,r):
+def PlotProfitVsK_ana(Pn,Ps,r,zshift=-0.01):
     #Ps.e_s = 0
-    Ks = np.linspace(.8,1.1,1000)
+    Ks = np.linspace(0,1.1,1000)
     Km,Kp = FindKs(Ps.c,Ps.eps,Ps.e_s,Ps.m,Ps.f_s,r.gamma,opt='lin')
     pn,ps = FindAnaPs(Ks,Ps.c,Ps.eps,Ps.e_s,Ps.m,Ps.f_s,r.gamma,opt='lin')
     pmax = 1/r.gamma
     Ln = Pn.val(pn,r,Ks)
     Ls = Ps.val(ps,r,Ks)
-    Ln2 = np.where(pn <= pmax, Pn.val(ps,r,Ks),0)
+    Ln2 = np.where(pn <= pmax, Pn.val(pn,r,Ks),0)
     Ls2 = np.where(ps <= pmax, Ps.val(ps,r,Ks),0)
     fig, ax = plt.subplots(figsize=(7,5))
     diff = Ls-Ln
     diff2 = Ls2-Ln2
-    ax.plot(Ks,diff,label='$P_S-P_N$')
-    ax.plot(Ks,diff2,label='$P_S-P_N$ (2)')
-    print(diff[:10])
-    print(diff2[:10])
+    ax.plot(Ks,Ls2,color='pink',label='$P_S$')
+    ax.plot(Ks,Ls,color='pink',linestyle='--') #P_S
+    ax.plot(Ks,Ln2,color='teal',label='$P_N$')
+    ax.plot(Ks,Ln,color='teal',linestyle='--')
+    ax.plot(Ks,diff2,color='purple',label='$P_S-P_N$')
+    ax.plot(Ks,diff,color='purple',linestyle='--')
     
-    ax.plot(Ks,pn,label='$p_n^*$')
-    ax.plot(Ks,ps,label='$p_s^*$')
-    ax.plot(Ks,[pmax]*len(Ks),label='$p_{max}=1/\gamma$') 
+    #plot optimized selling prices for sustainable /NS goods
+    #ax.plot(Ks,pn,label='$p_n^*$')
+    #ax.plot(Ks,ps,label='$p_s^*$')
+    #ax.plot(Ks,[pmax]*len(Ks),label='$p_{max}=1/\gamma$') 
+
     #find crossover point of p_n, p_s & p_max = 1/gamma
     intersect_s = np.argwhere(np.diff(np.sign(1/r.gamma-ps))).flatten()
     intersect_n = np.argwhere(np.diff(np.sign(1/r.gamma-pn))).flatten()
-    print(intersect_s)
-    print(intersect_n)
-    #ax.axvline(ps[intersect_s])
-    #ax.axvline(pn[intersect_s])
+    if len(intersect_s)>0:
+        idx_s = intersect_s[0]
+        ax.axvline(Ks[idx_s],color='pink')
+    if len(intersect_n)>0:
+        idx_n = intersect_n[0]
+        ax.axvline(Ks[idx_n],color='teal')
     
     ax.set_ylabel('$P$')
     ax.set_xlabel('carbon tax K')
-    ax.plot(Km,0,'bo',label='$K_{min}^-$')
-    ax.plot(Kp,0,'ro',label='$K_{min}^+$')
-    #ax.plot([Km,Kp],[0,0],'bo',label='$K_{min}$')
+    ax.plot(Km,0,'bo')
+    ax.plot(Kp,0,'ro')
+    ax.annotate('$K_{min}^-$',(Km,0),xytext=(Km-0.01,zshift),color='blue')
+    ax.annotate('$K_{min}^+$',(Kp,0),xytext=(Kp-0.01,zshift),color='red')
     print(Km,Kp)
     ax.grid(True, which='both')
-    ax.axhline(y=0, color='k')
-    ax.axvline(x=0, color='k')
+    #ax.axhline(y=0, color='k')
+    #ax.axvline(x=0, color='k')
     #ax.set_ylim(bottom=-.0005)
     ax.legend()
     fig.suptitle('$(c,\epsilon,e_s,m,f,\gamma) = (%.2f,%.2f,%.2f,%.2f,%.2f,%.2f)$' %(Ps.c,Ps.eps,Ps.e_s,Ps.m,Ps.f_s,r.gamma))
@@ -153,17 +160,16 @@ if __name__ == "__main__":
     from fun_model6 import ProfDensityNS, ProfDensityS, LinRate, ExpRate
 
     gamma = 1.
-    c = 0.1
+    c = 1.
     pmax = 10.
     #rate = ExpRate(gamma)
     rate = LinRate(gamma)
     pmax = 1/gamma
     Pn = ProfDensityNS(c=c,pmax=pmax) 
-    Ps = ProfDensityS(c=c,pmax=pmax,s=0.2,eps=0.3) 
-    #PlotProfitVsK_ana(Pn,Ps,rate)
-    #PlotK(csvname)
-    #AnalyticK(gamma,c=c,opt='lin')
-    Plot4D(3,e_s=0.,gamma=1.,opt='K')
+    Ps = ProfDensityS(c=c,pmax=pmax,s=0.2,eps=0.3,m=1.1,f_s=0.5,e_s=0) 
+    PlotProfitVsK_ana(Pn,Ps,rate,zshift=-0.001)
+    #Plot4D(3,e_s=0.,gamma=1.,opt='K')
+
     #print(FindKs(c=.1,eps=0.1,e_s=0.3,m=0.5,f=0.1,gamma=0.4,opt='lin'))
     #print(FindKs(c=.1,eps=.1,e_s=0.3,m=0.5,f=0.4,gamma=0.4,opt='lin'))
     #print(FindKs(c=.1,eps=.1,e_s=0.3,m=0.5,f=0.9,gamma=0.4,opt='lin'))
